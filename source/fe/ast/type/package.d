@@ -5,9 +5,10 @@ module fe.ast.type;
 
 import all;
 
-public import fe.ast.type.basic;
-public import fe.ast.type.func_sig;
-public import fe.ast.type.ptr;
-public import fe.ast.type.slice;
-public import fe.ast.type.static_array;
-public import fe.ast.type.type_node;
+public:
+import fe.ast.type.basic;
+import fe.ast.type.func_sig;
+import fe.ast.type.ptr;
+import fe.ast.type.slice;
+import fe.ast.type.static_array;
+import fe.ast.type.type_node;

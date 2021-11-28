@@ -3,14 +3,15 @@
 /// Authors: Andrey Penechko.
 module fe.ast;
 
-public import fe.ast.ast_index;
-public import fe.ast.decl;
-public import fe.ast.expr;
-public import fe.ast.stmt;
-public import fe.ast.type;
-public import fe.ast.token;
-public import fe.ast.source_file;
-public import fe.ast.ast_node;
-public import fe.ast.ast_node_flags;
-public import fe.ast.ast_node_state;
-public import fe.ast.ast_node_type;
+public:
+import fe.ast.ast_index;
+import fe.ast.decl;
+import fe.ast.expr;
+import fe.ast.stmt;
+import fe.ast.type;
+import fe.ast.token;
+import fe.ast.source_file;
+import fe.ast.ast_node;
+import fe.ast.ast_node_flags;
+import fe.ast.ast_node_state;
+import fe.ast.ast_node_type;

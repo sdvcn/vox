@@ -23,7 +23,8 @@
                 "source/bench.d",
                 "source/tester.d",
                 "source/tests/*.d"
-            ],
+            ]
+
         },
         {
             "name": "cli",

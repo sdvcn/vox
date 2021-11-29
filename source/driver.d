@@ -150,7 +150,7 @@ struct Driver
 		// to be RIP addressable in JIT mode
 		context.staticDataBuffer.voidPut(context.zeroDataLength)[] = 0; // zero initialize
 	}
-
+	/// 添加宿主函数组
 	void addHostSymbols(HostSymbol[] hostSymbols)
 	{
 		if (hostSymbols.length > 0)

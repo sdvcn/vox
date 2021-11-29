@@ -11,3 +11,6 @@
 *.lst
 *.sublime-project
 *.sublime-workspace
+.dub/build/*
+import/*
+vox.lib

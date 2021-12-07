@@ -1099,15 +1099,14 @@ void tester52(ref TestContext ctx) {
 @TestInfo(&tester53)
 immutable test53 = q{--- test53
 	// Test constant folding
-	enum i32 i32_min = -2147483648;
 	i32 add() { return 1 + 3; }
 	i32 sub() { return 3 - 1; }
 	i32 mul() { return 3 * 2; }
 	i32 div() { return 7 / 2; }
 	i32 rem() { return 7 % 2; }
 	i32 shl() { return 1 << 2; }
-	i32 shr() { return i32_min >>> 2; }
-	i32 sar() { return i32_min >> 2; }
+	i32 shr() { return i32.min >>> 2; }
+	i32 sar() { return i32.min >> 2; }
 	i32 or () { return 0b0011 | 0b0101; }
 	i32 xor() { return 0b0011 ^ 0b0101; }
 	i32 and() { return 0b0011 & 0b0101; }
@@ -3905,8 +3904,11 @@ immutable test177 = q{--- test177
 	f32 func_f32_const() { return 0.5; }
 	f64 func_f64_const() { return 0.5; }
 
-	//f32 func_f32_const_mult(f32 a) { return a * cast(f32)0.5; }
-	//f64 func_f64_const_mult(f64 a) { return a * 0.5; }
+	f32 func_f32_const_mult(f32 a) { return a * cast(f32)0.5; }
+	f64 func_f64_const_mult(f64 a) { return a * 0.5; }
+
+	f32 func_const_f32_mult(f32 a) { return cast(f32)0.5 * a; }
+	f64 func_const_f64_mult(f64 a) { return 0.5 * a; }
 
 	 i8 func_f32_to__i8(f32 a) { return a; } // f32 ->  i8
 	i16 func_f32_to_i16(f32 a) { return a; } // f32 -> i16
@@ -3959,8 +3961,11 @@ void tester177(ref TestContext ctx) {
 	assert(ctx.getFunctionPtr!(float)("func_f32_const")() == 0.5f.force);
 	assert(ctx.getFunctionPtr!(double)("func_f64_const")() == 0.5);
 
-	//assert(ctx.getFunctionPtr!(float, float)("func_f32_const_mult")(1) == 0.5f.force);
-	//assert(ctx.getFunctionPtr!(double, double)("func_f64_const_mult")(1) == 0.5);
+	assert(ctx.getFunctionPtr!(float, float)("func_f32_const_mult")(1) == 0.5f.force);
+	assert(ctx.getFunctionPtr!(double, double)("func_f64_const_mult")(1) == 0.5);
+
+	assert(ctx.getFunctionPtr!(float, float)("func_const_f32_mult")(1) == 0.5f.force);
+	assert(ctx.getFunctionPtr!(double, double)("func_const_f64_mult")(1) == 0.5);
 
 	assert(ctx.getFunctionPtr!(  byte,  float)("func_f32_to__i8")(-127.6f.force) == -127);
 	assert(ctx.getFunctionPtr!( short,  float)("func_f32_to_i16")(-127.6f.force) == -127);
@@ -4625,7 +4630,7 @@ void tester211(ref TestContext ctx) {
 }
 
 
-@TestInfo()
+/*@TestInfo()
 immutable test212 = q{--- test212
 	// Forward reference for variable init value -> enum init value -> enum member init value
 	VkQueryType queryType;
@@ -4633,7 +4638,7 @@ immutable test212 = q{--- test212
 		VK_QUERY_TYPE_OCCLUSION = 0,
 	}
 };
-
+*/
 
 /*@TestInfo()
 immutable test213 = q{--- test213
@@ -5038,3 +5043,141 @@ immutable test235 = q{--- test235
 	}
 	void receive(S**){}
 };
+
+
+@TestInfo()
+immutable test236 = q{--- test236
+	// Bug #27. be.reg_alloc.move_solver(82): ICE: Assertion failure: Second write to rax detected
+
+	// First DCE removes some instructions. This leads to some phi functions not having any users.
+	// This makes liveness analysis emit empty range for those vregs ([102; 102) and [144; 144) for example).
+	// Then register allocator allocates two intervals to the same register, because
+	// overlap of [144; 144) and [144; 148) is not detected and they are both allocated to eax.
+	// Then move solver sees 2 writes to the same register and reports an error.
+
+	f64 to_f64(u8* s) {
+		f64 a = 0.0;
+		i32 c;
+		i32 e = 0;
+		c = *s++; // This expression will give use the "illegal hardware instruction" issue if I un-comment it
+		while (c != '\0' && is_digit(c)) {
+			a = a * 10.0 + (c - '0');
+		}
+
+		if (c == '.') {
+			c = *s++; // However, the same expression doesn't give the error here
+			while (c != '\0' && is_digit(c)) {
+				a = a * 10.0 + (c - '0');
+				e = e - 1;
+				c = *s++; // And here too!
+			}
+		}
+
+		if (c == 'e' || c == 'E') {
+			i32 sign = 1;
+			i32 i = 0;
+			c = *s++;
+			if (c == '+') c = *s++;
+			else if (c == '-') {
+				c = *s++;
+				sign = -1;
+			}
+
+			while (is_digit(c)) {
+				i = i * 10 + (c - '0');
+				c = *s++;
+			}
+			e += i*sign;
+		}
+		return a;
+	}
+
+	bool is_digit(i32 c) {
+		return c >= '0' && c <= '9';
+	}
+};
+
+
+@TestInfo()
+immutable test237 = q{--- test237
+	// Bug #27. be.emit_mc_amd64(257): ICE: Assertion failure: reg size mismatch 2 != 3
+	f64 to_f64(u8* s) {
+		f64 a = 0.0;
+		i32 c;
+		i32 e = 0;
+
+		c = *s++; // This expression will give use the "illegal hardware instruction" issue if I un-comment it
+		while (c != '\0' && is_digit(c)) {
+			a = a * 10.0 + (c - '0');
+		}
+
+		if (c == '.') {
+			c = *s++; // However, the same expression doesn't give the error here
+			while (c != '\0' && is_digit(c)) {
+				a = a * 10.0 + (c - '0');
+				e = e - 1;
+				c = *s++; // And here too!
+			}
+		}
+
+		if (c == 'e' || c == 'E') {
+			i32 sign = 1;
+			i32 i = 0;
+			c = *s++;
+			if (c == '+') c = *s++;
+			else if (c == '-') {
+				c = *s++;
+				sign = -1;
+			}
+
+			while (is_digit(c)) {
+			  i = i * 10 + (c - '0');
+			  c = *s++;
+			}
+			e += i*sign;
+		}
+
+		while (e > 0) {
+			a *= 10.0;
+			e--;
+		}
+
+		while (e < 0) {
+			a *= 0.1;
+			e++;
+		}
+
+		return a;
+	}
+
+	bool is_digit(i32 c) {
+		return c >= '0' && c <= '9';
+	}
+};
+
+
+@TestInfo()
+immutable test238 = q{--- test238
+	/// Bug #28. Missing handling of globals, functions in move solver
+	u8* retGlobal(i32 num) {
+		if (num == 0) return "0";
+		return "1";
+	}
+	void function() regFunc(i32 num) {
+		if (num == 0) return &fun1;
+		return &fun2;
+	}
+	void fun1(){}
+	void fun2(){}
+};
+
+/*
+@TestInfo()
+immutable test239 = q{--- test239
+	// circular dependency on enum type
+	VkSharingMode mode = VkSharingMode.VK_SHARING_MODE_CONCURRENT;
+	enum VkSharingMode {
+		VK_SHARING_MODE_CONCURRENT = 1,
+		VK_SHARING_MODE_END_RANGE  = VK_SHARING_MODE_CONCURRENT,
+	}
+};*/

@@ -22,22 +22,26 @@
         {
             "name": "cli",
             "targetType": "executable",
-            "versions": [ "cli" ]
+            "versions": [ "cli" ],
+            "targetName": "cli"
         },
         {
             "name": "bench",
             "targetType": "executable",
-            "versions": [ "bench" ]
+            "versions": [ "bench" ],
+            "targetName": "bench"
         },
         {
             "name": "devtest",
             "targetType": "executable",
-            "versions": [ "devtest" ]
+            "versions": [ "devtest" ],
+            "targetName": "devtest"
         },
         {
             "name": "test",
             "targetType": "executable",
-            "versions": [ "test" ]
+            "versions": [ "test" ],
+            "targetName": "test"
         }
     ]
 }
